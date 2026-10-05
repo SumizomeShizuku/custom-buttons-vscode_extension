@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 const STATIC_SLOT_COUNT = 10;
+const READONLY_TOGGLE_COMMAND = 'workbench.action.files.toggleActiveEditorReadonlyInSession';
 
 type ButtonLocation =
     | 'statusBarLeft'
@@ -58,7 +59,15 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('customButtons.openCommandPicker', showButtonPicker),
         vscode.commands.registerCommand('customButtons.addButton', addButtonInteractively),
         vscode.commands.registerCommand('customButtons.removeButton', removeButtonInteractively),
-        vscode.commands.registerCommand('customButtons.addReadonlyPreset', addReadonlyPreset)
+        vscode.commands.registerCommand('customButtons.addReadonlyPreset', addReadonlyPreset),
+        vscode.commands.registerCommand(
+            'customButtons.readonlyPreset.editable',
+            () => vscode.commands.executeCommand(READONLY_TOGGLE_COMMAND)
+        ),
+        vscode.commands.registerCommand(
+            'customButtons.readonlyPreset.readonly',
+            () => vscode.commands.executeCommand(READONLY_TOGGLE_COMMAND)
+        )
     );
 
     registerStaticSlotCommands(context);
@@ -130,6 +139,16 @@ async function reloadButtons(): Promise<void> {
     const buttons = configuration.get<CustomButtonConfig[]>('buttons', []);
     const enabledButtons = buttons.filter((button) => button.enabled !== false && isValidButtonConfig(button));
 
+    const readonlyEditorTitleEnabled = enabledButtons.some(
+        (button) => button.location === 'editorTitle' && isReadonlyPreset(button)
+    );
+
+    await vscode.commands.executeCommand(
+        'setContext',
+        'customButtons.readonlyPreset.editorTitle',
+        readonlyEditorTitleEnabled
+    );
+
     createStatusBarButtons(enabledButtons);
     await bindStaticToolbarButtons(enabledButtons);
 }
@@ -182,7 +201,10 @@ async function bindStaticToolbarButtons(buttons: CustomButtonConfig[]): Promise<
     ];
 
     for (const location of locations) {
-        const locationButtons = buttons.filter((button) => button.location === location);
+        const locationButtons = buttons.filter(
+            (button) => button.location === location
+                && !(location === 'editorTitle' && isReadonlyPreset(button))
+        );
 
         for (let slot = 1; slot <= STATIC_SLOT_COUNT; slot += 1) {
             const commandId = getSlotCommandId(location, slot);
@@ -324,7 +346,7 @@ async function addButtonInteractively(): Promise<void> {
  */
 async function addReadonlyPreset(): Promise<void> {
     const buttons = getConfiguredButtons();
-    const command = 'workbench.action.files.toggleActiveEditorReadonlyInSession';
+    const command = READONLY_TOGGLE_COMMAND;
 
     if (buttons.some((button) => button.command === command)) {
         void vscode.window.showInformationMessage('A readonly toggle button is already configured.');
@@ -420,6 +442,16 @@ function createUniqueId(base: string, existing: CustomButtonConfig[]): string {
     }
 
     return candidate;
+}
+
+/**
+ * Returns whether a configured button is the built-in readonly toggle preset.
+ *
+ * @param button Button configuration to inspect.
+ * @returns true when the button invokes VS Code's session readonly toggle command.
+ */
+function isReadonlyPreset(button: CustomButtonConfig): boolean {
+    return button.command === READONLY_TOGGLE_COMMAND;
 }
 
 /**
