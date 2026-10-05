@@ -1,0 +1,134 @@
+{
+  "name": "custom-buttons",
+  "displayName": "Custom Buttons",
+  "description": "Create configurable VS Code status bar buttons and bind them to any VS Code command.",
+  "version": "0.1.0",
+  "publisher": "sumizomeshizuku",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:customButtons.reload",
+    "onCommand:customButtons.editConfiguration",
+    "onCommand:customButtons.openCommandPicker"
+  ],
+  "main": "./out/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npx @vscode/vsce package"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "customButtons.reload",
+        "title": "Reload Custom Buttons",
+        "category": "Custom Buttons",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "customButtons.editConfiguration",
+        "title": "Edit Button Configuration",
+        "category": "Custom Buttons",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "customButtons.openCommandPicker",
+        "title": "Run Custom Button",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "customButtons.openCommandPicker",
+          "group": "navigation@100",
+          "when": "resourceScheme == file"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Custom Buttons",
+      "properties": {
+        "customButtons.buttons": {
+          "type": "array",
+          "default": [
+            {
+              "id": "toggle-readonly",
+              "text": "$(lock) Readonly",
+              "tooltip": "Toggle active editor readonly in this session",
+              "command": "workbench.action.files.toggleActiveEditorReadonlyInSession",
+              "alignment": "right",
+              "priority": 100,
+              "enabled": true
+            }
+          ],
+          "markdownDescription": "Buttons shown in the VS Code status bar. Use Codicons such as `$(lock)` in `text`. Each button can invoke any registered VS Code command.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "text",
+              "command"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique ID for this button."
+              },
+              "text": {
+                "type": "string",
+                "description": "Button text. VS Code Codicons such as $(lock) are supported."
+              },
+              "tooltip": {
+                "type": "string",
+                "description": "Optional tooltip shown when hovering over the button."
+              },
+              "command": {
+                "type": "string",
+                "description": "VS Code command ID to execute when the button is clicked."
+              },
+              "arguments": {
+                "type": "array",
+                "description": "Optional arguments passed to the command.",
+                "items": {}
+              },
+              "alignment": {
+                "type": "string",
+                "enum": [
+                  "left",
+                  "right"
+                ],
+                "default": "right",
+                "description": "Status bar alignment."
+              },
+              "priority": {
+                "type": "number",
+                "default": 0,
+                "description": "Status bar priority. Higher values are shown closer to the edge."
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true,
+                "description": "Whether the button is visible."
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.6.0",
+    "typescript": "^5.9.3"
+  }
+}
