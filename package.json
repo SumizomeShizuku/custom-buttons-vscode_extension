@@ -1,8 +1,8 @@
 {
   "name": "custom-buttons",
   "displayName": "Custom Buttons",
-  "description": "Create configurable VS Code status bar buttons and bind them to any VS Code command.",
-  "version": "0.1.0",
+  "description": "Create configurable VS Code buttons and bind them to any VS Code command.",
+  "version": "0.2.0",
   "publisher": "sumizomeshizuku",
   "license": "MIT",
   "engines": {
@@ -12,10 +12,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished",
-    "onCommand:customButtons.reload",
-    "onCommand:customButtons.editConfiguration",
-    "onCommand:customButtons.openCommandPicker"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "scripts": {
@@ -43,14 +40,361 @@
         "title": "Run Custom Button",
         "category": "Custom Buttons",
         "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.addButton",
+        "title": "Add Custom Button",
+        "category": "Custom Buttons",
+        "icon": "$(add)"
+      },
+      {
+        "command": "customButtons.removeButton",
+        "title": "Remove Custom Button",
+        "category": "Custom Buttons",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "customButtons.addReadonlyPreset",
+        "title": "Add Readonly Toggle Preset",
+        "category": "Custom Buttons",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "customButtons.slot.editorTitle.1",
+        "title": "Custom Button 1",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.editorTitle.2",
+        "title": "Custom Button 2",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.editorTitle.3",
+        "title": "Custom Button 3",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.editorTitle.4",
+        "title": "Custom Button 4",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.editorTitle.5",
+        "title": "Custom Button 5",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.editorTitle.6",
+        "title": "Custom Button 6",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.editorTitle.7",
+        "title": "Custom Button 7",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.editorTitle.8",
+        "title": "Custom Button 8",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.editorTitle.9",
+        "title": "Custom Button 9",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.editorTitle.10",
+        "title": "Custom Button 10",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.viewTitle.1",
+        "title": "Custom Button 1",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.viewTitle.2",
+        "title": "Custom Button 2",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.viewTitle.3",
+        "title": "Custom Button 3",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.viewTitle.4",
+        "title": "Custom Button 4",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.viewTitle.5",
+        "title": "Custom Button 5",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.viewTitle.6",
+        "title": "Custom Button 6",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.viewTitle.7",
+        "title": "Custom Button 7",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.viewTitle.8",
+        "title": "Custom Button 8",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.viewTitle.9",
+        "title": "Custom Button 9",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.viewTitle.10",
+        "title": "Custom Button 10",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.debugToolbar.1",
+        "title": "Custom Button 1",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.debugToolbar.2",
+        "title": "Custom Button 2",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.debugToolbar.3",
+        "title": "Custom Button 3",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.debugToolbar.4",
+        "title": "Custom Button 4",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.debugToolbar.5",
+        "title": "Custom Button 5",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.debugToolbar.6",
+        "title": "Custom Button 6",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.debugToolbar.7",
+        "title": "Custom Button 7",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.debugToolbar.8",
+        "title": "Custom Button 8",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.debugToolbar.9",
+        "title": "Custom Button 9",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
+      },
+      {
+        "command": "customButtons.slot.debugToolbar.10",
+        "title": "Custom Button 10",
+        "category": "Custom Buttons",
+        "icon": "$(symbol-event)"
       }
     ],
     "menus": {
       "editor/title": [
         {
-          "command": "customButtons.openCommandPicker",
-          "group": "navigation@100",
-          "when": "resourceScheme == file"
+          "command": "customButtons.slot.editorTitle.1",
+          "group": "navigation@101",
+          "when": "customButtons.editorTitle.slot1"
+        },
+        {
+          "command": "customButtons.slot.editorTitle.2",
+          "group": "navigation@102",
+          "when": "customButtons.editorTitle.slot2"
+        },
+        {
+          "command": "customButtons.slot.editorTitle.3",
+          "group": "navigation@103",
+          "when": "customButtons.editorTitle.slot3"
+        },
+        {
+          "command": "customButtons.slot.editorTitle.4",
+          "group": "navigation@104",
+          "when": "customButtons.editorTitle.slot4"
+        },
+        {
+          "command": "customButtons.slot.editorTitle.5",
+          "group": "navigation@105",
+          "when": "customButtons.editorTitle.slot5"
+        },
+        {
+          "command": "customButtons.slot.editorTitle.6",
+          "group": "navigation@106",
+          "when": "customButtons.editorTitle.slot6"
+        },
+        {
+          "command": "customButtons.slot.editorTitle.7",
+          "group": "navigation@107",
+          "when": "customButtons.editorTitle.slot7"
+        },
+        {
+          "command": "customButtons.slot.editorTitle.8",
+          "group": "navigation@108",
+          "when": "customButtons.editorTitle.slot8"
+        },
+        {
+          "command": "customButtons.slot.editorTitle.9",
+          "group": "navigation@109",
+          "when": "customButtons.editorTitle.slot9"
+        },
+        {
+          "command": "customButtons.slot.editorTitle.10",
+          "group": "navigation@110",
+          "when": "customButtons.editorTitle.slot10"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "customButtons.slot.viewTitle.1",
+          "group": "navigation@101",
+          "when": "customButtons.viewTitle.slot1"
+        },
+        {
+          "command": "customButtons.slot.viewTitle.2",
+          "group": "navigation@102",
+          "when": "customButtons.viewTitle.slot2"
+        },
+        {
+          "command": "customButtons.slot.viewTitle.3",
+          "group": "navigation@103",
+          "when": "customButtons.viewTitle.slot3"
+        },
+        {
+          "command": "customButtons.slot.viewTitle.4",
+          "group": "navigation@104",
+          "when": "customButtons.viewTitle.slot4"
+        },
+        {
+          "command": "customButtons.slot.viewTitle.5",
+          "group": "navigation@105",
+          "when": "customButtons.viewTitle.slot5"
+        },
+        {
+          "command": "customButtons.slot.viewTitle.6",
+          "group": "navigation@106",
+          "when": "customButtons.viewTitle.slot6"
+        },
+        {
+          "command": "customButtons.slot.viewTitle.7",
+          "group": "navigation@107",
+          "when": "customButtons.viewTitle.slot7"
+        },
+        {
+          "command": "customButtons.slot.viewTitle.8",
+          "group": "navigation@108",
+          "when": "customButtons.viewTitle.slot8"
+        },
+        {
+          "command": "customButtons.slot.viewTitle.9",
+          "group": "navigation@109",
+          "when": "customButtons.viewTitle.slot9"
+        },
+        {
+          "command": "customButtons.slot.viewTitle.10",
+          "group": "navigation@110",
+          "when": "customButtons.viewTitle.slot10"
+        }
+      ],
+      "debug/toolBar": [
+        {
+          "command": "customButtons.slot.debugToolbar.1",
+          "group": "navigation@101",
+          "when": "customButtons.debugToolbar.slot1"
+        },
+        {
+          "command": "customButtons.slot.debugToolbar.2",
+          "group": "navigation@102",
+          "when": "customButtons.debugToolbar.slot2"
+        },
+        {
+          "command": "customButtons.slot.debugToolbar.3",
+          "group": "navigation@103",
+          "when": "customButtons.debugToolbar.slot3"
+        },
+        {
+          "command": "customButtons.slot.debugToolbar.4",
+          "group": "navigation@104",
+          "when": "customButtons.debugToolbar.slot4"
+        },
+        {
+          "command": "customButtons.slot.debugToolbar.5",
+          "group": "navigation@105",
+          "when": "customButtons.debugToolbar.slot5"
+        },
+        {
+          "command": "customButtons.slot.debugToolbar.6",
+          "group": "navigation@106",
+          "when": "customButtons.debugToolbar.slot6"
+        },
+        {
+          "command": "customButtons.slot.debugToolbar.7",
+          "group": "navigation@107",
+          "when": "customButtons.debugToolbar.slot7"
+        },
+        {
+          "command": "customButtons.slot.debugToolbar.8",
+          "group": "navigation@108",
+          "when": "customButtons.debugToolbar.slot8"
+        },
+        {
+          "command": "customButtons.slot.debugToolbar.9",
+          "group": "navigation@109",
+          "when": "customButtons.debugToolbar.slot9"
+        },
+        {
+          "command": "customButtons.slot.debugToolbar.10",
+          "group": "navigation@110",
+          "when": "customButtons.debugToolbar.slot10"
         }
       ]
     },
@@ -65,59 +409,69 @@
               "text": "$(lock) Readonly",
               "tooltip": "Toggle active editor readonly in this session",
               "command": "workbench.action.files.toggleActiveEditorReadonlyInSession",
-              "alignment": "right",
+              "location": "statusBarRight",
               "priority": 100,
               "enabled": true
             }
           ],
-          "markdownDescription": "Buttons shown in the VS Code status bar. Use Codicons such as `$(lock)` in `text`. Each button can invoke any registered VS Code command.",
+          "markdownDescription": "Custom buttons. Status bar buttons are fully dynamic. Toolbar locations use pre-registered runtime slots because VS Code menu contribution points are static.",
           "items": {
             "type": "object",
             "required": [
               "id",
               "text",
-              "command"
+              "command",
+              "location"
             ],
             "properties": {
               "id": {
                 "type": "string",
-                "description": "Unique ID for this button."
+                "description": "Unique button ID."
               },
               "text": {
                 "type": "string",
-                "description": "Button text. VS Code Codicons such as $(lock) are supported."
+                "description": "Button text. Codicons such as $(lock) are supported in status bar locations."
               },
               "tooltip": {
                 "type": "string",
-                "description": "Optional tooltip shown when hovering over the button."
+                "description": "Optional hover text."
               },
               "command": {
                 "type": "string",
-                "description": "VS Code command ID to execute when the button is clicked."
+                "description": "VS Code command ID executed when clicked."
               },
               "arguments": {
                 "type": "array",
-                "description": "Optional arguments passed to the command.",
+                "description": "Optional positional arguments passed to the command.",
                 "items": {}
               },
-              "alignment": {
+              "location": {
                 "type": "string",
                 "enum": [
-                  "left",
-                  "right"
+                  "statusBarLeft",
+                  "statusBarRight",
+                  "editorTitle",
+                  "viewTitle",
+                  "debugToolbar"
                 ],
-                "default": "right",
-                "description": "Status bar alignment."
+                "default": "statusBarRight",
+                "enumDescriptions": [
+                  "Bottom status bar, left side.",
+                  "Bottom status bar, right side.",
+                  "Right side of the active editor/tab title area.",
+                  "Title toolbar of VS Code views. The slot may appear in compatible view title toolbars.",
+                  "Debug toolbar."
+                ]
               },
               "priority": {
                 "type": "number",
                 "default": 0,
-                "description": "Status bar priority. Higher values are shown closer to the edge."
+                "description": "Ordering priority. Higher values are placed closer to the leading edge when supported."
               },
               "enabled": {
                 "type": "boolean",
                 "default": true,
-                "description": "Whether the button is visible."
+                "description": "Whether this button is active."
               }
             },
             "additionalProperties": false
