@@ -60,6 +60,18 @@
         "icon": "$(lock)"
       },
       {
+        "command": "customButtons.readonlyPreset.readonly",
+        "title": "只读",
+        "category": "Custom Buttons",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "customButtons.readonlyPreset.editable",
+        "title": "可编辑",
+        "category": "Custom Buttons",
+        "icon": "$(unlock)"
+      },
+      {
         "command": "customButtons.slot.editorTitle.1",
         "title": "Custom Button 1",
         "category": "Custom Buttons",
@@ -242,6 +254,16 @@
     ],
     "menus": {
       "editor/title": [
+        {
+          "command": "customButtons.readonlyPreset.editable",
+          "group": "navigation@99",
+          "when": "customButtons.readonlyPreset.editorTitle && !editorReadonly"
+        },
+        {
+          "command": "customButtons.readonlyPreset.readonly",
+          "group": "navigation@99",
+          "when": "customButtons.readonlyPreset.editorTitle && editorReadonly"
+        },
         {
           "command": "customButtons.slot.editorTitle.1",
           "group": "navigation@101",
