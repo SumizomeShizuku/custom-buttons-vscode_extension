@@ -12,6 +12,9 @@ on:
       - ".vscodeignore"
       - ".github/workflows/build-vsix.yml"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build VS Code Extension
@@ -32,12 +35,20 @@ jobs:
       - name: Compile TypeScript
         run: npm run compile
 
+      - name: Read extension version
+        id: metadata
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "vsix=dist/custom-buttons-v$VERSION.vsix" >> "$GITHUB_OUTPUT"
+
       - name: Build VSIX package
         shell: bash
         run: |
           mkdir -p dist
-          VERSION=$(node -p "require('./package.json').version")
-          npx @vscode/vsce package --out "dist/custom-buttons-v${VERSION}.vsix"
+          npx @vscode/vsce package --out "${{ steps.metadata.outputs.vsix }}"
 
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
@@ -46,3 +57,23 @@ jobs:
           path: dist/*.vsix
           if-no-files-found: error
           retention-days: 30
+
+      - name: Create or update GitHub Release
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'release:')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.metadata.outputs.tag }}
+          VERSION: ${{ steps.metadata.outputs.version }}
+          VSIX: ${{ steps.metadata.outputs.vsix }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists. Replacing the VSIX asset."
+            gh release upload "$TAG" "$VSIX" --clobber
+          else
+            echo "Creating release $TAG."
+            gh release create "$TAG" "$VSIX" \
+              --target "$GITHUB_SHA" \
+              --title "Custom Buttons v$VERSION" \
+              --generate-notes
+          fi
