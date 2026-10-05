@@ -51,6 +51,12 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Bump extension version
+        if: github.event_name == 'workflow_dispatch' && inputs.bump != 'none'
+        shell: bash
+        run: |
+          npm version "${{ inputs.bump }}" --no-git-tag-version
+
       - name: Install dependencies
         shell: bash
         run: |
@@ -59,12 +65,6 @@ jobs:
           else
             npm install
           fi
-
-      - name: Bump extension version
-        if: github.event_name == 'workflow_dispatch' && inputs.bump != 'none'
-        shell: bash
-        run: |
-          npm version "${{ inputs.bump }}" --no-git-tag-version
 
       - name: Read extension version
         id: metadata
