@@ -1,3 +1,4 @@
+[简体中文](./README.zh-CN.md)
 # Custom Buttons for VS Code
 
 Create configurable buttons in VS Code and bind them to any registered VS Code command.
