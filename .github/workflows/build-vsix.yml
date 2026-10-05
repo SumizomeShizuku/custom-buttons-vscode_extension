@@ -2,12 +2,25 @@ name: Build VSIX
 
 on:
   workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version increment for this release"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - none
+
   push:
     branches:
       - main
     paths:
       - "src/**"
       - "package.json"
+      - "package-lock.json"
       - "tsconfig.json"
       - ".vscodeignore"
       - ".github/workflows/build-vsix.yml"
@@ -23,6 +36,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate release branch
+        if: github.event_name == 'workflow_dispatch' && github.ref_name != 'main'
+        shell: bash
+        run: |
+          echo "Releases must be created from the main branch."
+          exit 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -30,10 +52,19 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: npm install
+        shell: bash
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
 
-      - name: Compile TypeScript
-        run: npm run compile
+      - name: Bump extension version
+        if: github.event_name == 'workflow_dispatch' && inputs.bump != 'none'
+        shell: bash
+        run: |
+          npm version "${{ inputs.bump }}" --no-git-tag-version
 
       - name: Read extension version
         id: metadata
@@ -43,6 +74,9 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
           echo "vsix=dist/custom-buttons-v$VERSION.vsix" >> "$GITHUB_OUTPUT"
+
+      - name: Compile TypeScript
+        run: npm run compile
 
       - name: Build VSIX package
         shell: bash
@@ -58,14 +92,39 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Commit bumped version
+        if: github.event_name == 'workflow_dispatch' && inputs.bump != 'none'
+        shell: bash
+        env:
+          VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add package.json
+          if [ -f package-lock.json ]; then
+            git add package-lock.json
+          fi
+
+          git commit -m "chore(release): bump version to v$VERSION [skip ci]"
+          git push origin HEAD:main
+
+      - name: Read release target
+        if: github.event_name == 'workflow_dispatch'
+        id: release_target
+        shell: bash
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Create or update GitHub Release
-        if: github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'release:')
+        if: github.event_name == 'workflow_dispatch'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.metadata.outputs.tag }}
           VERSION: ${{ steps.metadata.outputs.version }}
           VSIX: ${{ steps.metadata.outputs.vsix }}
+          TARGET_SHA: ${{ steps.release_target.outputs.sha }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists. Replacing the VSIX asset."
@@ -73,7 +132,7 @@ jobs:
           else
             echo "Creating release $TAG."
             gh release create "$TAG" "$VSIX" \
-              --target "$GITHUB_SHA" \
+              --target "$TARGET_SHA" \
               --title "Custom Buttons v$VERSION" \
               --generate-notes
           fi
