@@ -286,8 +286,8 @@ async function addButtonInteractively(): Promise<void> {
         return;
     }
 
-    const location = await vscode.window.showQuickPick<ButtonLocation>(
-        ['statusBarLeft', 'statusBarRight', 'editorTitle', 'viewTitle', 'debugToolbar'],
+    const location = await vscode.window.showQuickPick(
+        ['statusBarLeft', 'statusBarRight', 'editorTitle', 'viewTitle', 'debugToolbar'] as const,
         {
             title: 'Button location',
             placeHolder: 'Choose where the button should appear'
