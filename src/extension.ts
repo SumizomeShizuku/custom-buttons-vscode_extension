@@ -286,15 +286,21 @@ async function addButtonInteractively(): Promise<void> {
         return;
     }
 
-    const location = await vscode.window.showQuickPick(
-        ['statusBarLeft', 'statusBarRight', 'editorTitle', 'viewTitle', 'debugToolbar'] as const,
+    const locationItem = await vscode.window.showQuickPick(
+        [
+            { label: 'Bottom status bar · Left', value: 'statusBarLeft' as ButtonLocation },
+            { label: 'Bottom status bar · Right', value: 'statusBarRight' as ButtonLocation },
+            { label: 'Editor / tab title toolbar', value: 'editorTitle' as ButtonLocation },
+            { label: 'View title toolbar', value: 'viewTitle' as ButtonLocation },
+            { label: 'Debug toolbar', value: 'debugToolbar' as ButtonLocation }
+        ],
         {
             title: 'Button location',
             placeHolder: 'Choose where the button should appear'
         }
     );
 
-    if (!location) {
+    if (!locationItem) {
         return;
     }
 
@@ -304,7 +310,7 @@ async function addButtonInteractively(): Promise<void> {
         text,
         tooltip: `Run command: ${command}`,
         command,
-        location,
+        location: locationItem.value,
         enabled: true
     });
 
