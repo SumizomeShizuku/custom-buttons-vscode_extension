@@ -1,16 +1,25 @@
 import * as vscode from 'vscode';
 
+const STATIC_SLOT_COUNT = 10;
+
+type ButtonLocation =
+    | 'statusBarLeft'
+    | 'statusBarRight'
+    | 'editorTitle'
+    | 'viewTitle'
+    | 'debugToolbar';
+
 /**
- * Configuration structure for one user-defined status bar button.
+ * User configuration for one custom button.
  */
 interface CustomButtonConfig {
-    /** Unique identifier used internally by this extension. */
+    /** Unique identifier for this button. */
     id: string;
 
-    /** Visible status bar text. Codicons such as "$(lock)" are supported. */
+    /** Visible text. Status bar locations support VS Code Codicons such as "$(lock)". */
     text: string;
 
-    /** Optional hover text shown for the button. */
+    /** Optional hover text. */
     tooltip?: string;
 
     /** VS Code command ID executed when the button is clicked. */
@@ -19,179 +28,226 @@ interface CustomButtonConfig {
     /** Optional positional arguments passed to the target command. */
     arguments?: unknown[];
 
-    /** Side of the status bar where the button is displayed. */
-    alignment?: 'left' | 'right';
+    /** UI location used for this button. */
+    location: ButtonLocation;
 
-    /** Position priority inside the selected status bar side. */
+    /** Ordering priority when the target location supports it. */
     priority?: number;
 
-    /** Whether the button should currently be created and shown. */
+    /** Whether the button should be active. */
     enabled?: boolean;
 }
 
 /**
- * Runtime representation of a configured button.
+ * Maps a statically contributed toolbar slot to the user's runtime button configuration.
  */
-interface RuntimeButton {
-    /** Original configuration used to create the status bar item. */
-    config: CustomButtonConfig;
+const staticSlotBindings = new Map<string, CustomButtonConfig>();
 
-    /** VS Code status bar item owned by this extension. */
-    item: vscode.StatusBarItem;
-}
-
-/** Active custom status bar buttons currently managed by the extension. */
-let runtimeButtons: RuntimeButton[] = [];
+/** Runtime-created status bar items. */
+let statusBarItems: vscode.StatusBarItem[] = [];
 
 /**
- * Activates the extension.
+ * Activates the extension and registers all commands.
  *
- * The extension loads configured buttons, watches for settings changes,
- * and registers helper commands used by the editor-title launcher.
- *
- * @param context VS Code extension context used to register disposables.
+ * @param context VS Code extension context used to own registered disposables.
  */
 export function activate(context: vscode.ExtensionContext): void {
-    const reloadDisposable = vscode.commands.registerCommand(
-        'customButtons.reload',
-        () => reloadButtons(context)
+    context.subscriptions.push(
+        vscode.commands.registerCommand('customButtons.reload', () => reloadButtons()),
+        vscode.commands.registerCommand('customButtons.editConfiguration', editConfiguration),
+        vscode.commands.registerCommand('customButtons.openCommandPicker', showButtonPicker),
+        vscode.commands.registerCommand('customButtons.addButton', addButtonInteractively),
+        vscode.commands.registerCommand('customButtons.removeButton', removeButtonInteractively),
+        vscode.commands.registerCommand('customButtons.addReadonlyPreset', addReadonlyPreset)
     );
 
-    const editConfigurationDisposable = vscode.commands.registerCommand(
-        'customButtons.editConfiguration',
-        async () => {
-            // Open the Settings UI directly at this extension's button configuration.
-            await vscode.commands.executeCommand(
-                'workbench.action.openSettings',
-                '@ext:sumizomeshizuku.custom-buttons customButtons.buttons'
-            );
-        }
-    );
-
-    const openCommandPickerDisposable = vscode.commands.registerCommand(
-        'customButtons.openCommandPicker',
-        () => showButtonPicker()
-    );
-
-    const configurationDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
-        // Rebuild buttons immediately when the user edits customButtons.buttons.
-        if (event.affectsConfiguration('customButtons.buttons')) {
-            reloadButtons(context);
-        }
-    });
+    registerStaticSlotCommands(context);
 
     context.subscriptions.push(
-        reloadDisposable,
-        editConfigurationDisposable,
-        openCommandPickerDisposable,
-        configurationDisposable
+        vscode.workspace.onDidChangeConfiguration((event) => {
+            // Rebuild all UI immediately after the user edits this extension's settings.
+            if (event.affectsConfiguration('customButtons.buttons')) {
+                void reloadButtons();
+            }
+        })
     );
 
-    reloadButtons(context);
+    void reloadButtons();
 }
 
 /**
- * Deactivates the extension and removes all status bar items.
+ * Releases runtime-created status bar items.
  */
 export function deactivate(): void {
-    disposeRuntimeButtons();
+    disposeStatusBarItems();
 }
 
 /**
- * Rebuilds all status bar buttons from the current VS Code configuration.
+ * Registers the fixed command IDs used by static VS Code toolbar contribution points.
  *
- * @param context VS Code extension context that owns created status bar items.
+ * VS Code requires toolbar/menu entries to be declared in package.json, so each supported
+ * static location receives a finite number of slots. The slots are rebound to user commands
+ * every time configuration is reloaded.
+ *
+ * @param context VS Code extension context used to own command registrations.
  */
-function reloadButtons(context: vscode.ExtensionContext): void {
-    disposeRuntimeButtons();
+function registerStaticSlotCommands(context: vscode.ExtensionContext): void {
+    const locations: Exclude<ButtonLocation, 'statusBarLeft' | 'statusBarRight'>[] = [
+        'editorTitle',
+        'viewTitle',
+        'debugToolbar'
+    ];
 
-    const configuration = vscode.workspace.getConfiguration('customButtons');
-    const configuredButtons = configuration.get<CustomButtonConfig[]>('buttons', []);
+    for (const location of locations) {
+        for (let slot = 1; slot <= STATIC_SLOT_COUNT; slot += 1) {
+            const commandId = getSlotCommandId(location, slot);
 
-    const usedIds = new Set<string>();
+            context.subscriptions.push(
+                vscode.commands.registerCommand(commandId, async (...menuArguments: unknown[]) => {
+                    const button = staticSlotBindings.get(commandId);
+                    if (!button) {
+                        return;
+                    }
 
-    for (const buttonConfig of configuredButtons) {
-        // Ignore disabled entries without creating any VS Code UI object.
-        if (buttonConfig.enabled === false) {
-            continue;
+                    // User-defined arguments take precedence. If none are supplied, preserve
+                    // contextual arguments provided by VS Code menus such as resource URIs.
+                    const argumentsToUse = button.arguments ?? menuArguments;
+                    await vscode.commands.executeCommand(button.command, ...argumentsToUse);
+                })
+            );
         }
-
-        // Invalid entries are skipped so one bad setting does not break all buttons.
-        if (!isValidButtonConfig(buttonConfig)) {
-            console.warn('[Custom Buttons] Ignoring invalid button configuration:', buttonConfig);
-            continue;
-        }
-
-        // Duplicate IDs are ambiguous and therefore skipped after the first occurrence.
-        if (usedIds.has(buttonConfig.id)) {
-            console.warn(`[Custom Buttons] Duplicate button id ignored: ${buttonConfig.id}`);
-            continue;
-        }
-        usedIds.add(buttonConfig.id);
-
-        const alignment = buttonConfig.alignment === 'left'
-            ? vscode.StatusBarAlignment.Left
-            : vscode.StatusBarAlignment.Right;
-
-        const item = vscode.window.createStatusBarItem(
-            `customButtons.${buttonConfig.id}`,
-            alignment,
-            buttonConfig.priority ?? 0
-        );
-
-        item.name = `Custom Button: ${buttonConfig.id}`;
-        item.text = buttonConfig.text;
-        item.tooltip = buttonConfig.tooltip ?? `Run command: ${buttonConfig.command}`;
-
-        // A Command object lets configuration pass arbitrary command arguments.
-        item.command = {
-            title: buttonConfig.tooltip ?? buttonConfig.text,
-            command: buttonConfig.command,
-            arguments: buttonConfig.arguments
-        };
-
-        item.show();
-
-        runtimeButtons.push({
-            config: buttonConfig,
-            item
-        });
-
-        // Register every created item for automatic cleanup when VS Code unloads the extension.
-        context.subscriptions.push(item);
     }
 }
 
 /**
- * Opens a Quick Pick containing every currently visible custom button.
+ * Rebuilds dynamic status bar items and remaps all static toolbar slots.
+ */
+async function reloadButtons(): Promise<void> {
+    disposeStatusBarItems();
+    staticSlotBindings.clear();
+
+    const configuration = vscode.workspace.getConfiguration('customButtons');
+    const buttons = configuration.get<CustomButtonConfig[]>('buttons', []);
+    const enabledButtons = buttons.filter((button) => button.enabled !== false && isValidButtonConfig(button));
+
+    createStatusBarButtons(enabledButtons);
+    await bindStaticToolbarButtons(enabledButtons);
+}
+
+/**
+ * Creates fully dynamic status bar buttons.
  *
- * This command is also exposed as the fixed editor-title toolbar button because
- * VS Code does not provide a runtime API for dynamically adding arbitrary
- * editor-title menu entries from user configuration.
+ * @param buttons All validated and enabled button configurations.
+ */
+function createStatusBarButtons(buttons: CustomButtonConfig[]): void {
+    for (const button of buttons) {
+        if (button.location !== 'statusBarLeft' && button.location !== 'statusBarRight') {
+            continue;
+        }
+
+        const alignment = button.location === 'statusBarLeft'
+            ? vscode.StatusBarAlignment.Left
+            : vscode.StatusBarAlignment.Right;
+
+        const item = vscode.window.createStatusBarItem(
+            `customButtons.${button.id}`,
+            alignment,
+            button.priority ?? 0
+        );
+
+        item.name = `Custom Button: ${button.id}`;
+        item.text = button.text;
+        item.tooltip = button.tooltip ?? `Run command: ${button.command}`;
+        item.command = {
+            title: button.tooltip ?? button.text,
+            command: button.command,
+            arguments: button.arguments
+        };
+        item.show();
+
+        statusBarItems.push(item);
+    }
+}
+
+/**
+ * Assigns user buttons to statically contributed toolbar slots.
+ *
+ * @param buttons All validated and enabled button configurations.
+ */
+async function bindStaticToolbarButtons(buttons: CustomButtonConfig[]): Promise<void> {
+    const locations: Exclude<ButtonLocation, 'statusBarLeft' | 'statusBarRight'>[] = [
+        'editorTitle',
+        'viewTitle',
+        'debugToolbar'
+    ];
+
+    for (const location of locations) {
+        const locationButtons = buttons.filter((button) => button.location === location);
+
+        for (let slot = 1; slot <= STATIC_SLOT_COUNT; slot += 1) {
+            const commandId = getSlotCommandId(location, slot);
+            const contextKey = `customButtons.${location}.slot${slot}`;
+            const button = locationButtons[slot - 1];
+
+            if (button) {
+                staticSlotBindings.set(commandId, button);
+            }
+
+            // The package.json menu entry observes this key to show or hide its slot.
+            await vscode.commands.executeCommand('setContext', contextKey, Boolean(button));
+        }
+
+        if (locationButtons.length > STATIC_SLOT_COUNT) {
+            console.warn(
+                `[Custom Buttons] ${location} supports up to ${STATIC_SLOT_COUNT} toolbar buttons; extra entries were ignored.`
+            );
+        }
+    }
+}
+
+/**
+ * Opens VS Code settings focused on this extension.
+ */
+async function editConfiguration(): Promise<void> {
+    await vscode.commands.executeCommand(
+        'workbench.action.openSettings',
+        '@ext:sumizomeshizuku.custom-buttons customButtons.buttons'
+    );
+}
+
+/**
+ * Opens a picker containing all enabled custom buttons and runs the selected command.
  */
 async function showButtonPicker(): Promise<void> {
-    if (runtimeButtons.length === 0) {
+    const buttons = getConfiguredButtons().filter(
+        (button) => button.enabled !== false && isValidButtonConfig(button)
+    );
+
+    if (buttons.length === 0) {
         const action = await vscode.window.showInformationMessage(
             'No Custom Buttons are configured.',
+            'Add Button',
             'Open Settings'
         );
 
-        if (action === 'Open Settings') {
-            await vscode.commands.executeCommand('customButtons.editConfiguration');
+        if (action === 'Add Button') {
+            await addButtonInteractively();
+        } else if (action === 'Open Settings') {
+            await editConfiguration();
         }
         return;
     }
 
     const selected = await vscode.window.showQuickPick(
-        runtimeButtons.map(({ config }) => ({
-            label: config.text,
-            description: config.tooltip,
-            detail: config.command,
-            config
+        buttons.map((button) => ({
+            label: button.text,
+            description: button.tooltip,
+            detail: `${button.location} · ${button.command}`,
+            button
         })),
         {
             title: 'Custom Buttons',
-            placeHolder: 'Select a configured button to run its command'
+            placeHolder: 'Select a configured button to run'
         }
     );
 
@@ -199,35 +255,212 @@ async function showButtonPicker(): Promise<void> {
         return;
     }
 
-    // Execute the configured command exactly as the status bar button would.
     await vscode.commands.executeCommand(
-        selected.config.command,
-        ...(selected.config.arguments ?? [])
+        selected.button.command,
+        ...(selected.button.arguments ?? [])
     );
 }
 
 /**
- * Validates the minimum fields required to create a functional button.
+ * Interactively creates a button by selecting from all registered VS Code command IDs.
+ */
+async function addButtonInteractively(): Promise<void> {
+    const commandIds = (await vscode.commands.getCommands(true)).sort();
+    const command = await vscode.window.showQuickPick(commandIds, {
+        title: 'Add Custom Button',
+        placeHolder: 'Choose a VS Code command ID',
+        matchOnDescription: true
+    });
+
+    if (!command) {
+        return;
+    }
+
+    const text = await vscode.window.showInputBox({
+        title: 'Button text',
+        prompt: 'Enter button text. Status bar buttons may include Codicons such as $(lock).',
+        value: command
+    });
+
+    if (!text) {
+        return;
+    }
+
+    const location = await vscode.window.showQuickPick<ButtonLocation>(
+        ['statusBarLeft', 'statusBarRight', 'editorTitle', 'viewTitle', 'debugToolbar'],
+        {
+            title: 'Button location',
+            placeHolder: 'Choose where the button should appear'
+        }
+    );
+
+    if (!location) {
+        return;
+    }
+
+    const buttons = getConfiguredButtons();
+    buttons.push({
+        id: createUniqueId(command, buttons),
+        text,
+        tooltip: `Run command: ${command}`,
+        command,
+        location,
+        enabled: true
+    });
+
+    await saveButtons(buttons);
+}
+
+/**
+ * Adds the built-in readonly toggle preset requested for this extension.
  *
- * @param value Candidate configuration object read from VS Code settings.
- * @returns true when the object contains non-empty id, text, and command strings.
+ * The preset uses VS Code's native session-only readonly toggle command.
+ */
+async function addReadonlyPreset(): Promise<void> {
+    const buttons = getConfiguredButtons();
+    const command = 'workbench.action.files.toggleActiveEditorReadonlyInSession';
+
+    if (buttons.some((button) => button.command === command)) {
+        void vscode.window.showInformationMessage('A readonly toggle button is already configured.');
+        return;
+    }
+
+    buttons.push({
+        id: createUniqueId('toggle-readonly', buttons),
+        text: '$(lock) Readonly',
+        tooltip: 'Toggle active editor readonly in this session',
+        command,
+        location: 'statusBarRight',
+        priority: 100,
+        enabled: true
+    });
+
+    await saveButtons(buttons);
+    void vscode.window.showInformationMessage('Readonly toggle preset added.');
+}
+
+/**
+ * Lets the user select and remove one configured button.
+ */
+async function removeButtonInteractively(): Promise<void> {
+    const buttons = getConfiguredButtons();
+
+    const selected = await vscode.window.showQuickPick(
+        buttons.map((button, index) => ({
+            label: button.text,
+            description: button.command,
+            detail: button.location,
+            index
+        })),
+        {
+            title: 'Remove Custom Button',
+            placeHolder: 'Choose a button to remove'
+        }
+    );
+
+    if (!selected) {
+        return;
+    }
+
+    buttons.splice(selected.index, 1);
+    await saveButtons(buttons);
+}
+
+/**
+ * Reads the complete current button configuration.
+ *
+ * @returns A mutable copy of the configured button array.
+ */
+function getConfiguredButtons(): CustomButtonConfig[] {
+    const configuration = vscode.workspace.getConfiguration('customButtons');
+    return [...configuration.get<CustomButtonConfig[]>('buttons', [])];
+}
+
+/**
+ * Saves button configuration to the user's global VS Code settings.
+ *
+ * @param buttons Complete replacement button configuration.
+ */
+async function saveButtons(buttons: CustomButtonConfig[]): Promise<void> {
+    const configuration = vscode.workspace.getConfiguration('customButtons');
+
+    await configuration.update(
+        'buttons',
+        buttons,
+        vscode.ConfigurationTarget.Global
+    );
+}
+
+/**
+ * Creates a stable unique ID derived from a command ID.
+ *
+ * @param base Source text used to create the ID.
+ * @param existing Existing buttons that must not share the resulting ID.
+ * @returns A unique configuration ID.
+ */
+function createUniqueId(base: string, existing: CustomButtonConfig[]): string {
+    const normalized = base
+        .toLowerCase()
+        .replace(/[^a-z0-9._-]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'button';
+
+    const existingIds = new Set(existing.map((button) => button.id));
+    let candidate = normalized;
+    let suffix = 2;
+
+    while (existingIds.has(candidate)) {
+        candidate = `${normalized}-${suffix}`;
+        suffix += 1;
+    }
+
+    return candidate;
+}
+
+/**
+ * Validates the minimum fields required by a button.
+ *
+ * @param value Candidate object read from VS Code settings.
+ * @returns true when the button can be executed and rendered.
  */
 function isValidButtonConfig(value: CustomButtonConfig): boolean {
+    const validLocations: ButtonLocation[] = [
+        'statusBarLeft',
+        'statusBarRight',
+        'editorTitle',
+        'viewTitle',
+        'debugToolbar'
+    ];
+
     return typeof value?.id === 'string'
         && value.id.trim().length > 0
         && typeof value.text === 'string'
         && value.text.trim().length > 0
         && typeof value.command === 'string'
-        && value.command.trim().length > 0;
+        && value.command.trim().length > 0
+        && validLocations.includes(value.location);
 }
 
 /**
- * Disposes every runtime-created status bar item and clears the local registry.
+ * Returns the command ID corresponding to one static toolbar slot.
+ *
+ * @param location Static toolbar location.
+ * @param slot One-based slot number.
+ * @returns Registered bridge command ID.
  */
-function disposeRuntimeButtons(): void {
-    for (const runtimeButton of runtimeButtons) {
-        runtimeButton.item.dispose();
+function getSlotCommandId(
+    location: Exclude<ButtonLocation, 'statusBarLeft' | 'statusBarRight'>,
+    slot: number
+): string {
+    return `customButtons.slot.${location}.${slot}`;
+}
+
+/**
+ * Disposes all runtime-created status bar items.
+ */
+function disposeStatusBarItems(): void {
+    for (const item of statusBarItems) {
+        item.dispose();
     }
 
-    runtimeButtons = [];
+    statusBarItems = [];
 }
