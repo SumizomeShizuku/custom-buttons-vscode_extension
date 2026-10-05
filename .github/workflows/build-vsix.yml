@@ -1,0 +1,48 @@
+name: Build VSIX
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "package.json"
+      - "tsconfig.json"
+      - ".vscodeignore"
+      - ".github/workflows/build-vsix.yml"
+
+jobs:
+  build:
+    name: Build VS Code Extension
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Compile TypeScript
+        run: npm run compile
+
+      - name: Build VSIX package
+        shell: bash
+        run: |
+          mkdir -p dist
+          VERSION=$(node -p "require('./package.json').version")
+          npx @vscode/vsce package --out "dist/custom-buttons-v${VERSION}.vsix"
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-buttons-vsix
+          path: dist/*.vsix
+          if-no-files-found: error
+          retention-days: 30
